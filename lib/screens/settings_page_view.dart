@@ -319,6 +319,26 @@ class _SettingsPageViewState extends State<SettingsPageView> {
                 setState(() {});
               },
             ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kPrimary,
+                  side: const BorderSide(color: kPrimary),
+                ),
+                onPressed: () async {
+                  await AppNotificationService.instance.show(
+                      'SRA 测试通知', '这是一条来自 SRA 控制台的测试通知');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('已发送测试通知'), duration: Duration(seconds: 2)));
+                  }
+                },
+                icon: const Icon(Icons.notifications_active_outlined, size: 18),
+                label: const Text('发送测试通知'),
+              ),
+            ),
           ],
         ),
       ),

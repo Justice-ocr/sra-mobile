@@ -70,11 +70,21 @@ class _HomeScreenState extends State<HomeScreen>
 
   // 内容滚动方向 → 控制悬浮导航显隐
   bool _onScrollNotification(ScrollNotification n) {
+    // 顶部附近始终显示，避免短页面误隐藏后无法恢复
+    if (n.metrics.pixels <= 8) {
+      if (!_navVisible) setState(() => _navVisible = true);
+      return false;
+    }
+    // 内容不足以滚动时（短页面）始终显示
+    if (n.metrics.maxScrollExtent <= 0) {
+      if (!_navVisible) setState(() => _navVisible = true);
+      return false;
+    }
     if (n is UserScrollNotification) {
       if (n.direction == ScrollDirection.reverse && _navVisible) {
-        setState(() => _navVisible = false);
+        setState(() => _navVisible = false); // 下滑隐藏
       } else if (n.direction == ScrollDirection.forward && !_navVisible) {
-        setState(() => _navVisible = true);
+        setState(() => _navVisible = true); // 上滑显示
       }
     }
     return false;
@@ -951,10 +961,11 @@ class _WavePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final amp = amplitude.clamp(0.0, 1.0);
     // 三层：后→中→前。前层 100% 面板色，与面板无缝衔接；后两层半透明做层次
+    // speed 必须为整数，保证 t:0→1 循环时相位变化为 2π 整数倍，首尾无缝不卡顿
     final layers = [
-      _WaveLayer(opacity: 0.28, baseFactor: 0.28, ampScale: 0.7, speed: 0.55, phase: 0.0,  freq: 1.0),
-      _WaveLayer(opacity: 0.50, baseFactor: 0.42, ampScale: 0.85, speed: -0.8, phase: 0.4,  freq: 1.3),
-      _WaveLayer(opacity: 1.0,  baseFactor: 0.58, ampScale: 1.0, speed: 1.1,  phase: 0.7,  freq: 0.85),
+      _WaveLayer(opacity: 0.28, baseFactor: 0.28, ampScale: 0.7,  speed1: 1,  speed2: 2,  phase: 0.0, freq: 1.0),
+      _WaveLayer(opacity: 0.50, baseFactor: 0.42, ampScale: 0.85, speed1: -1, speed2: 2,  phase: 0.4, freq: 1.3),
+      _WaveLayer(opacity: 1.0,  baseFactor: 0.58, ampScale: 1.0,  speed1: 1,  speed2: -2, phase: 0.7, freq: 0.85),
     ];
 
     final baseAmp = 16.0 * amp;
@@ -972,8 +983,8 @@ class _WavePainter extends CustomPainter {
         final px = x / size.width;
         final a = baseAmp * layer.ampScale;
         final y = baseline
-            + sin((px * 2 * pi * layer.freq) + t * 2 * pi * layer.speed + layer.phase * 2 * pi) * a
-            + sin((px * 3.5 * pi * layer.freq) + t * 2 * pi * layer.speed * 0.7 + layer.phase) * a * 0.45;
+            + sin((px * 2 * pi * layer.freq) + t * 2 * pi * layer.speed1 + layer.phase * 2 * pi) * a
+            + sin((px * 3.5 * pi * layer.freq) + t * 2 * pi * layer.speed2 + layer.phase) * a * 0.45;
         path.lineTo(x, y);
       }
       path.lineTo(size.width, size.height + 1);
@@ -991,14 +1002,16 @@ class _WaveLayer {
   final double opacity;
   final double baseFactor; // 基线在画布高度的占比
   final double ampScale;
-  final double speed;
+  final int speed1; // 整数速度，保证循环无缝
+  final int speed2;
   final double phase;
   final double freq;
   const _WaveLayer({
     required this.opacity,
     required this.baseFactor,
     required this.ampScale,
-    required this.speed,
+    required this.speed1,
+    required this.speed2,
     required this.phase,
     required this.freq,
   });
