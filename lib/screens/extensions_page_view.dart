@@ -80,7 +80,7 @@ class _ExtensionsPageViewState extends State<ExtensionsPageView> {
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
       children: [
         Text('SRA 拓展', style: TextStyle(color: onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),

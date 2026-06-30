@@ -195,7 +195,7 @@ class _ConfigEditorPageState extends State<ConfigEditorPage> {
 
   Widget _tabBody(List<Widget> children) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: children,
     );
   }

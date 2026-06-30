@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
+import '../services/app_notification_service.dart';
 import '../widgets/form_fields.dart';
 
 /// 系统设置页：启动与识图 / 远程连接 / 通知 三个分区
@@ -157,7 +158,7 @@ class _SettingsPageViewState extends State<SettingsPageView> {
   }
 
   Widget _tabBody(List<Widget> children) =>
-      ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: children);
+      ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), children: children);
 
   // ── 启动与识图 ──
   Widget _generalTab() {
@@ -291,6 +292,37 @@ class _SettingsPageViewState extends State<SettingsPageView> {
   // ── 通知 ──
   Widget _notificationTab() {
     return _tabBody([
+      // App 本地通知（纯 app 端，不依赖 SRA 本体）
+      GlassPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.phone_android, color: kPrimary, size: 18),
+                const SizedBox(width: 8),
+                Text('App 应用通知',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 15, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text('任务完成时在手机弹出系统通知（仅本机，不修改 SRA 设置）。',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
+            SwitchField(
+              label: '启用 App 通知',
+              value: AppNotificationService.instance.enabled,
+              activeText: '开启', inactiveText: '关闭',
+              onChanged: (v) async {
+                await AppNotificationService.instance.setEnabled(v);
+                setState(() {});
+              },
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 8),
       GlassPanel(
         child: Column(
           children: [

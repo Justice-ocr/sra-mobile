@@ -5,6 +5,7 @@ import 'config/routes.dart';
 import 'config/theme.dart';
 import 'services/api_service.dart';
 import 'services/storage_service.dart';
+import 'services/app_notification_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/task_provider.dart';
 import 'providers/theme_provider.dart';
@@ -15,6 +16,7 @@ void main() async {
 
   final storage = StorageService();
   await storage.init();
+  await AppNotificationService.instance.init();
   final apiService = ApiService();
 
   runApp(

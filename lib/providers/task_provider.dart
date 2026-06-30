@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
+import '../services/app_notification_service.dart';
 import '../models/task_status.dart';
 
 class TaskProvider extends ChangeNotifier {
@@ -33,8 +34,13 @@ class TaskProvider extends ChangeNotifier {
 
   Future<void> refreshStatus() async {
     try {
+      final prev = _status;
       _status = await api.getTaskStatus();
       _error = null;
+      // 任务由运行→停止：发本地通知（app 端实现，不依赖 SRA 本体）
+      if (prev?.running == true && _status?.running == false) {
+        AppNotificationService.instance.show('SRA 任务完成', '任务已结束运行');
+      }
       notifyListeners();
     } catch (_) {}
   }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
@@ -26,7 +27,8 @@ class _HomeScreenState extends State<HomeScreen>
   Timer? _heroTimer;
   late AnimationController _waveCtrl;
   final DraggableScrollableController _sheetCtrl = DraggableScrollableController();
-  double _sheetProgress = 0.0; // 0=55% 1=100%
+  double _sheetProgress = 0.0; // 0=46% 1=100%
+  bool _navVisible = true; // 悬浮导航可见性
 
   static const _pageTitles = ['任务控制', '配置管理', '运行日志', '拓展', '系统设置'];
   static const _pageDescs = [
@@ -60,10 +62,22 @@ class _HomeScreenState extends State<HomeScreen>
     });
     _sheetCtrl.addListener(() {
       if (!mounted) return;
-      // minChildSize=0.55, maxChildSize=1.0, so progress = (size-0.55)/0.45
-      final p = ((_sheetCtrl.size - 0.55) / 0.45).clamp(0.0, 1.0);
+      // minChildSize=0.46, maxChildSize=1.0, so progress = (size-0.46)/0.54
+      final p = ((_sheetCtrl.size - 0.46) / 0.54).clamp(0.0, 1.0);
       if ((p - _sheetProgress).abs() > 0.005) setState(() => _sheetProgress = p);
     });
+  }
+
+  // 内容滚动方向 → 控制悬浮导航显隐
+  bool _onScrollNotification(ScrollNotification n) {
+    if (n is UserScrollNotification) {
+      if (n.direction == ScrollDirection.reverse && _navVisible) {
+        setState(() => _navVisible = false);
+      } else if (n.direction == ScrollDirection.forward && !_navVisible) {
+        setState(() => _navVisible = true);
+      }
+    }
+    return false;
   }
 
   @override
@@ -81,94 +95,96 @@ class _HomeScreenState extends State<HomeScreen>
 
     return Scaffold(
       extendBody: true,
-      bottomNavigationBar: _buildBottomNav(isDark),
-      body: Stack(
-        children: [
-          // 全屏背景图
-          ..._bgImages.asMap().entries.map((e) => AnimatedOpacity(
-                duration: const Duration(milliseconds: 600),
-                opacity: _currentPage == e.key ? 1.0 : 0.0,
-                child: Image.asset(e.value,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    errorBuilder: (_, __, ___) =>
-                        Container(color: const Color(0xFF050816))),
-              )),
-          // 遮罩
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.black.withOpacity(0.40), Colors.black.withOpacity(0.70)],
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _onScrollNotification,
+        child: Stack(
+          children: [
+            // 全屏背景图
+            ..._bgImages.asMap().entries.map((e) => AnimatedOpacity(
+                  duration: const Duration(milliseconds: 600),
+                  opacity: _currentPage == e.key ? 1.0 : 0.0,
+                  child: Image.asset(e.value,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (_, __, ___) =>
+                          Container(color: const Color(0xFF050816))),
+                )),
+            // 遮罩
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withOpacity(0.40), Colors.black.withOpacity(0.70)],
+                ),
               ),
             ),
-          ),
-          // hero 内容（顶栏 + 标题）
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: MediaQuery.of(context).size.height * 0.56,
-            child: _buildHeroContent(),
-          ),
-          // 幕布面板
-          DraggableScrollableSheet(
-            controller: _sheetCtrl,
-            initialChildSize: 0.46,
-            minChildSize: 0.46,
-            maxChildSize: 1.0,
-            snap: true,
-            snapSizes: const [0.46, 1.0],
-            builder: (_, ctrl) {
-              return AnimatedBuilder(
-                animation: _waveCtrl,
-                builder: (_, __) => Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // 多层波浪：贴在面板顶部上方，底边与面板重叠 1px 防接缝
-                    Positioned(
-                      top: -46,
-                      left: 0,
-                      right: 0,
-                      height: 48,
-                      child: Opacity(
-                        opacity: (1.0 - _sheetProgress).clamp(0.0, 1.0),
-                        child: CustomPaint(
-                          size: Size(MediaQuery.of(context).size.width, 48),
-                          painter: _WavePainter(_waveCtrl.value, panelColor, 1.0 - _sheetProgress),
+            // hero 内容（顶栏 + 标题）
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.of(context).size.height * 0.56,
+              child: _buildHeroContent(),
+            ),
+            // 幕布面板
+            DraggableScrollableSheet(
+              controller: _sheetCtrl,
+              initialChildSize: 0.46,
+              minChildSize: 0.46,
+              maxChildSize: 1.0,
+              snap: true,
+              snapSizes: const [0.46, 1.0],
+              builder: (_, ctrl) {
+                return AnimatedBuilder(
+                  animation: _waveCtrl,
+                  builder: (_, __) => Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // 多层波浪：前层与面板同色无缝衔接，后层半透明装饰
+                      Positioned(
+                        top: -44,
+                        left: 0,
+                        right: 0,
+                        height: 46,
+                        child: Opacity(
+                          opacity: (1.0 - _sheetProgress).clamp(0.0, 1.0),
+                          child: CustomPaint(
+                            size: Size(MediaQuery.of(context).size.width, 46),
+                            painter: _WavePainter(_waveCtrl.value, panelColor, 1.0 - _sheetProgress),
+                          ),
                         ),
                       ),
-                    ),
-                    PrimaryScrollController(
-                      controller: ctrl,
-                      child: Container(
-                        decoration: BoxDecoration(
+                      // 面板本体：无顶部阴影（阴影会形成可见接缝）
+                      PrimaryScrollController(
+                        controller: ctrl,
+                        child: Container(
                           color: panelColor,
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, -6))],
-                        ),
-                        child: Column(children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8, bottom: 4),
-                            child: Container(
-                              width: 40, height: 4,
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.white24 : Colors.black26,
-                                borderRadius: BorderRadius.circular(2),
+                          child: Column(children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8, bottom: 4),
+                              child: Container(
+                                width: 40, height: 4,
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white24 : Colors.black26,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
                             ),
-                          ),
-                          Expanded(child: _buildPageContent()),
-                        ]),
+                            Expanded(child: _buildPageContent()),
+                          ]),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
+                    ],
+                  ),
+                );
+              },
+            ),
+            // 悬浮液态玻璃导航（下滑隐藏，上滑出现）
+            _buildFloatingNav(isDark),
+          ],
+        ),
       ),
     );
   }
@@ -299,66 +315,94 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // 底部导航（液态玻璃材质）
-  Widget _buildBottomNav(bool isDark) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-        child: Container(
-          decoration: BoxDecoration(
-            // 液态玻璃：渐变高光 + 半透明底色
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: isDark
-                  ? [Colors.white.withOpacity(0.14), Colors.white.withOpacity(0.04)]
-                  : [Colors.white.withOpacity(0.75), Colors.white.withOpacity(0.45)],
-            ),
-            border: Border(
-              top: BorderSide(
-                color: isDark ? Colors.white.withOpacity(0.22) : Colors.white.withOpacity(0.7),
-                width: 1.2,
+  // 悬浮液态玻璃导航（下滑隐藏，上滑出现）
+  Widget _buildFloatingNav(bool isDark) {
+    const items = [
+      (Icons.play_circle_outline, Icons.play_circle, '任务'),
+      (Icons.folder_outlined, Icons.folder, '配置'),
+      (Icons.terminal_outlined, Icons.terminal, '日志'),
+      (Icons.extension_outlined, Icons.extension, '拓展'),
+      (Icons.settings_outlined, Icons.settings, '设置'),
+    ];
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      left: 16,
+      right: 16,
+      bottom: _navVisible ? bottomInset + 12 : -(72 + bottomInset),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 220),
+        opacity: _navVisible ? 1.0 : 0.0,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(26),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              height: 64,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(26),
+                // 液态玻璃：渐变高光 + 半透明底色
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [Colors.white.withOpacity(0.16), Colors.white.withOpacity(0.05)]
+                      : [Colors.white.withOpacity(0.78), Colors.white.withOpacity(0.48)],
+                ),
+                border: Border.all(
+                  color: isDark ? Colors.white.withOpacity(0.22) : Colors.white.withOpacity(0.7),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.35 : 0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(items.length, (i) {
+                  final selected = _currentPage == i;
+                  final (icon, selIcon, label) = items[i];
+                  return Expanded(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () => setState(() => _currentPage = i),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: selected ? const Color(0xFF00C8D7).withOpacity(0.18) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              selected ? selIcon : icon,
+                              size: 22,
+                              color: selected
+                                  ? const Color(0xFF00C8D7)
+                                  : (isDark ? Colors.white60 : const Color(0xFF667085)),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(label,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? const Color(0xFF00C8D7)
+                                    : (isDark ? Colors.white60 : const Color(0xFF667085)),
+                              )),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
               ),
-            ],
-          ),
-          child: NavigationBarTheme(
-            data: NavigationBarThemeData(
-              backgroundColor: Colors.transparent,
-              labelTextStyle: WidgetStateProperty.all(
-                TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white70 : const Color(0xFF293154)),
-              ),
-              iconTheme: WidgetStateProperty.resolveWith((states) {
-                final selected = states.contains(WidgetState.selected);
-                return IconThemeData(
-                  color: selected
-                      ? const Color(0xFF00C8D7)
-                      : (isDark ? Colors.white60 : const Color(0xFF667085)),
-                );
-              }),
-            ),
-            child: NavigationBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedIndex: _currentPage,
-              onDestinationSelected: (i) => setState(() => _currentPage = i),
-              indicatorColor: const Color(0xFF00C8D7).withOpacity(0.18),
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              destinations: const [
-                NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle, color: Color(0xFF00C8D7)), label: '任务'),
-                NavigationDestination(icon: Icon(Icons.folder_outlined), selectedIcon: Icon(Icons.folder, color: Color(0xFF00C8D7)), label: '配置'),
-                NavigationDestination(icon: Icon(Icons.terminal_outlined), selectedIcon: Icon(Icons.terminal, color: Color(0xFF00C8D7)), label: '日志'),
-                NavigationDestination(icon: Icon(Icons.extension_outlined), selectedIcon: Icon(Icons.extension, color: Color(0xFF00C8D7)), label: '拓展'),
-                NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings, color: Color(0xFF00C8D7)), label: '设置'),
-              ],
             ),
           ),
         ),
@@ -395,7 +439,7 @@ class _TaskPage extends StatelessWidget {
       builder: (context, task, _) {
         final status = task.status;
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
           children: [
             _GlassCard(
               child: Column(
@@ -562,7 +606,7 @@ class _ConfigPage extends StatelessWidget {
               child: task.configs.isEmpty
                   ? Center(child: Text('暂无配置', style: TextStyle(color: onSurface.withOpacity(0.38))))
                   : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
                       itemCount: task.configs.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
@@ -687,7 +731,7 @@ class _LogPageState extends State<_LogPage> {
         ),
         Expanded(
           child: Container(
-            margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            margin: const EdgeInsets.fromLTRB(20, 0, 20, 100),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isDark ? Colors.black.withOpacity(0.5) : Colors.black.withOpacity(0.06),
@@ -906,11 +950,11 @@ class _WavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final amp = amplitude.clamp(0.0, 1.0);
-    // 三层：后→中→前，越靠前越不透明、振幅越大、基线越低
+    // 三层：后→中→前。前层 100% 面板色，与面板无缝衔接；后两层半透明做层次
     final layers = [
-      _WaveLayer(opacity: 0.32, baseFactor: 0.30, ampScale: 0.7, speed: 0.55, phase: 0.0,  freq: 1.0),
-      _WaveLayer(opacity: 0.58, baseFactor: 0.45, ampScale: 0.85, speed: -0.8, phase: 0.4,  freq: 1.3),
-      _WaveLayer(opacity: 0.94, baseFactor: 0.62, ampScale: 1.0, speed: 1.1,  phase: 0.7,  freq: 0.85),
+      _WaveLayer(opacity: 0.28, baseFactor: 0.28, ampScale: 0.7, speed: 0.55, phase: 0.0,  freq: 1.0),
+      _WaveLayer(opacity: 0.50, baseFactor: 0.42, ampScale: 0.85, speed: -0.8, phase: 0.4,  freq: 1.3),
+      _WaveLayer(opacity: 1.0,  baseFactor: 0.58, ampScale: 1.0, speed: 1.1,  phase: 0.7,  freq: 0.85),
     ];
 
     final baseAmp = 16.0 * amp;
