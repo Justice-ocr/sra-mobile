@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -256,6 +257,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
+            ),
+          ),
+
+          // 主题切换按钮（右上角）
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 12,
+            child: IconButton(
+              onPressed: () => context.read<ThemeProvider>().toggle(),
+              icon: Icon(
+                context.watch<ThemeProvider>().isDark
+                    ? Icons.light_mode_outlined
+                    : Icons.dark_mode_outlined,
+                color: Colors.white.withOpacity(0.85),
+                size: 24,
+              ),
+              tooltip: '切换主题',
             ),
           ),
         ],

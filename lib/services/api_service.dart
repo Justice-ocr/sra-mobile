@@ -130,6 +130,37 @@ class ApiService {
     }
   }
 
+  // 锄大地任务定义（副本/关卡元数据）
+  Future<List<dynamic>> getTaskDefinitions() async {
+    try {
+      final response = await _dio.get('/api/Metadata/trailblaze-power/tasks');
+      return List<dynamic>.from(response.data);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // 自动对话设置
+  Future<bool> saveAutoPlot(bool enabled, bool skipPlot) async {
+    try {
+      final response = await _dio.post('/api/Extensions/auto-plot',
+          data: {'enabled': enabled, 'skipPlot': skipPlot});
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 运行抽卡资源预测
+  Future<bool> runWarpForecast() async {
+    try {
+      final response = await _dio.post('/api/Extensions/warp-forecast/run');
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // SSE 日志流：返回原始 Stream<String>
   Stream<String> streamLogs() {
     final uri = Uri.parse('${_baseUrl!}/api/Task/logs/stream?access_token=$_token');

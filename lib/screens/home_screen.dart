@@ -8,6 +8,9 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/theme_provider.dart';
+import 'config_editor_page.dart';
+import 'settings_page_view.dart';
+import 'extensions_page_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -77,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen>
     final panelColor = Theme.of(context).scaffoldBackgroundColor;
 
     return Scaffold(
+      extendBody: true,
       bottomNavigationBar: _buildBottomNav(isDark),
       body: Stack(
         children: [
@@ -106,32 +110,33 @@ class _HomeScreenState extends State<HomeScreen>
             top: 0,
             left: 0,
             right: 0,
-            bottom: MediaQuery.of(context).size.height * 0.45,
+            bottom: MediaQuery.of(context).size.height * 0.56,
             child: _buildHeroContent(),
           ),
           // 幕布面板
           DraggableScrollableSheet(
             controller: _sheetCtrl,
-            initialChildSize: 0.55,
-            minChildSize: 0.55,
+            initialChildSize: 0.46,
+            minChildSize: 0.46,
             maxChildSize: 1.0,
             snap: true,
-            snapSizes: const [0.55, 1.0],
+            snapSizes: const [0.46, 1.0],
             builder: (_, ctrl) {
               return AnimatedBuilder(
                 animation: _waveCtrl,
                 builder: (_, __) => Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // 波浪贴在面板顶部上方（随覆盖进度渐隐）
+                    // 多层波浪：贴在面板顶部上方，底边与面板重叠 1px 防接缝
                     Positioned(
-                      top: -44,
+                      top: -46,
                       left: 0,
                       right: 0,
+                      height: 48,
                       child: Opacity(
                         opacity: (1.0 - _sheetProgress).clamp(0.0, 1.0),
                         child: CustomPaint(
-                          size: Size(MediaQuery.of(context).size.width, 50),
+                          size: Size(MediaQuery.of(context).size.width, 48),
                           painter: _WavePainter(_waveCtrl.value, panelColor, 1.0 - _sheetProgress),
                         ),
                       ),
@@ -141,11 +146,11 @@ class _HomeScreenState extends State<HomeScreen>
                       child: Container(
                         decoration: BoxDecoration(
                           color: panelColor,
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, -4))],
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, -6))],
                         ),
                         child: Column(children: [
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.only(top: 8, bottom: 4),
                             child: Container(
                               width: 40, height: 4,
                               decoration: BoxDecoration(
@@ -294,23 +299,68 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // 底部导航（玻璃效果）
+  // 底部导航（液态玻璃材质）
   Widget _buildBottomNav(bool isDark) {
-    return ClipRect(
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: NavigationBar(
-          backgroundColor: isDark ? Colors.black.withOpacity(0.55) : Colors.white.withOpacity(0.75),
-          selectedIndex: _currentPage,
-          onDestinationSelected: (i) => setState(() => _currentPage = i),
-          indicatorColor: const Color(0xFF00C8D7).withOpacity(0.2),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle, color: Color(0xFF00C8D7)), label: '任务'),
-            NavigationDestination(icon: Icon(Icons.folder_outlined), selectedIcon: Icon(Icons.folder, color: Color(0xFF00C8D7)), label: '配置'),
-            NavigationDestination(icon: Icon(Icons.terminal_outlined), selectedIcon: Icon(Icons.terminal, color: Color(0xFF00C8D7)), label: '日志'),
-            NavigationDestination(icon: Icon(Icons.extension_outlined), selectedIcon: Icon(Icons.extension, color: Color(0xFF00C8D7)), label: '拓展'),
-            NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings, color: Color(0xFF00C8D7)), label: '设置'),
-          ],
+        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        child: Container(
+          decoration: BoxDecoration(
+            // 液态玻璃：渐变高光 + 半透明底色
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isDark
+                  ? [Colors.white.withOpacity(0.14), Colors.white.withOpacity(0.04)]
+                  : [Colors.white.withOpacity(0.75), Colors.white.withOpacity(0.45)],
+            ),
+            border: Border(
+              top: BorderSide(
+                color: isDark ? Colors.white.withOpacity(0.22) : Colors.white.withOpacity(0.7),
+                width: 1.2,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: NavigationBarTheme(
+            data: NavigationBarThemeData(
+              backgroundColor: Colors.transparent,
+              labelTextStyle: WidgetStateProperty.all(
+                TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white70 : const Color(0xFF293154)),
+              ),
+              iconTheme: WidgetStateProperty.resolveWith((states) {
+                final selected = states.contains(WidgetState.selected);
+                return IconThemeData(
+                  color: selected
+                      ? const Color(0xFF00C8D7)
+                      : (isDark ? Colors.white60 : const Color(0xFF667085)),
+                );
+              }),
+            ),
+            child: NavigationBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              selectedIndex: _currentPage,
+              onDestinationSelected: (i) => setState(() => _currentPage = i),
+              indicatorColor: const Color(0xFF00C8D7).withOpacity(0.18),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle, color: Color(0xFF00C8D7)), label: '任务'),
+                NavigationDestination(icon: Icon(Icons.folder_outlined), selectedIcon: Icon(Icons.folder, color: Color(0xFF00C8D7)), label: '配置'),
+                NavigationDestination(icon: Icon(Icons.terminal_outlined), selectedIcon: Icon(Icons.terminal, color: Color(0xFF00C8D7)), label: '日志'),
+                NavigationDestination(icon: Icon(Icons.extension_outlined), selectedIcon: Icon(Icons.extension, color: Color(0xFF00C8D7)), label: '拓展'),
+                NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings, color: Color(0xFF00C8D7)), label: '设置'),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -325,9 +375,9 @@ class _HomeScreenState extends State<HomeScreen>
       case 2:
         return const _LogPage();
       case 3:
-        return const _ExtensionsPage();
+        return const ExtensionsPageView();
       case 4:
-        return const _SettingsPage();
+        return const SettingsPageView();
       default:
         return const _TaskPage();
     }
@@ -485,7 +535,7 @@ class _ConfigPage extends StatelessWidget {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ChangeNotifierProvider.value(
         value: context.read<TaskProvider>(),
-        child: _ConfigDetailPage(configName: cfg),
+        child: ConfigEditorPage(configName: cfg),
       ),
     ));
   }
@@ -553,145 +603,6 @@ class _ConfigPage extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-// ── 配置详情编辑页 ──────────────────────────────────
-class _ConfigDetailPage extends StatefulWidget {
-  final String configName;
-  const _ConfigDetailPage({required this.configName});
-  @override
-  State<_ConfigDetailPage> createState() => _ConfigDetailPageState();
-}
-
-class _ConfigDetailPageState extends State<_ConfigDetailPage> {
-  Map<String, dynamic>? _data;
-  bool _loading = true;
-  bool _saving = false;
-  String? _error;
-  final Map<String, TextEditingController> _controllers = {};
-  final Map<String, bool> _boolValues = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final data = await context.read<TaskProvider>().api.getConfig(widget.configName);
-    if (!mounted) return;
-    setState(() {
-      _data = data;
-      _loading = false;
-      if (data != null) _initFields(data);
-    });
-  }
-
-  void _initFields(Map<String, dynamic> data) {
-    for (final section in data.entries) {
-      if (section.value is! Map) continue;
-      final m = Map<String, dynamic>.from(section.value as Map);
-      for (final e in m.entries) {
-        final key = '${section.key}.${e.key}';
-        if (e.value is bool) {
-          _boolValues[key] = e.value as bool;
-        } else {
-          _controllers[key] = TextEditingController(text: e.value?.toString() ?? '');
-        }
-      }
-    }
-  }
-
-  Future<void> _save() async {
-    setState(() { _saving = true; _error = null; });
-    // 把扁平化的 key 还原成嵌套 map
-    final out = Map<String, dynamic>.from(_data!);
-    for (final section in out.keys.toList()) {
-      if (out[section] is! Map) continue;
-      final m = Map<String, dynamic>.from(out[section] as Map);
-      for (final k in m.keys.toList()) {
-        final flatKey = '$section.$k';
-        if (_boolValues.containsKey(flatKey)) {
-          m[k] = _boolValues[flatKey];
-        } else if (_controllers.containsKey(flatKey)) {
-          final raw = _controllers[flatKey]!.text;
-          m[k] = num.tryParse(raw) ?? raw;
-        }
-      }
-      out[section] = m;
-    }
-    final ok = await context.read<TaskProvider>().api.saveConfig(widget.configName, out);
-    if (!mounted) return;
-    setState(() { _saving = false; _error = ok ? null : '保存失败'; });
-    if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('配置已保存'), duration: Duration(seconds: 2)));
-      Navigator.of(context).pop();
-    }
-  }
-
-  @override
-  void dispose() {
-    for (final c in _controllers.values) c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = Theme.of(context).scaffoldBackgroundColor;
-    final textColor = Theme.of(context).colorScheme.onSurface;
-    return Scaffold(
-      backgroundColor: bg,
-      appBar: AppBar(
-        backgroundColor: bg,
-        title: Text(widget.configName, style: TextStyle(color: textColor)),
-        leading: BackButton(color: textColor),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? '保存中...' : '保存', style: const TextStyle(color: Color(0xFF00C8D7))),
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00C8D7)))
-          : _data == null
-              ? const Center(child: Text('加载失败'))
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: _ErrorBanner(message: _error!)),
-                    // 按 section 分组渲染
-                    ..._buildSections(context, _data!),
-                  ],
-                ),
-    );
-  }
-
-  List<Widget> _buildSections(BuildContext context, Map<String, dynamic> data) {
-    // data 顶层 key 就是 section（startGame, trailblazePower 等）
-    return data.entries.where((e) => e.key != 'name' && e.key != 'version').map((section) {
-      final sectionData = section.value;
-      if (sectionData is! Map) return const SizedBox.shrink();
-      return _SectionCard(
-        title: _sectionLabel(section.key),
-        fields: Map<String, dynamic>.from(sectionData),
-        controllers: _controllers,
-        boolValues: _boolValues,
-        onBoolChanged: (k, v) => setState(() => _boolValues[k] = v),
-      );
-    }).toList();
-  }
-
-  static String _sectionLabel(String key) {
-    const labels = {
-      'startGame': '启动游戏',
-      'trailblazePower': '锄大地',
-      'receiveRewards': '领取奖励',
-      'cosmicStrife': '模拟宇宙',
-      'missionAccomplished': '任务完成后',
-    };
-    return labels[key] ?? key;
   }
 }
 
@@ -802,219 +713,6 @@ class _LogPageState extends State<_LogPage> {
   }
 }
 
-// ── 设置页 ─────────────────────────────────────────
-class _SettingsPage extends StatefulWidget {
-  const _SettingsPage();
-  @override
-  State<_SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends State<_SettingsPage> {
-  Map<String, dynamic>? _data;
-  bool _loading = true;
-  bool _saving = false;
-  String? _error;
-  final Map<String, TextEditingController> _controllers = {};
-  final Map<String, bool> _boolValues = {};
-
-  @override
-  void initState() { super.initState(); _load(); }
-
-  Future<void> _load() async {
-    final data = await context.read<TaskProvider>().api.getSettings();
-    if (!mounted) return;
-    setState(() {
-      _data = data;
-      _loading = false;
-      if (data != null) _initFields(data);
-    });
-  }
-
-  void _initFields(Map<String, dynamic> data) {
-    for (final section in data.entries) {
-      if (section.value is! Map) continue;
-      final m = Map<String, dynamic>.from(section.value as Map);
-      for (final e in m.entries) {
-        final key = '${section.key}.${e.key}';
-        if (e.value is bool) {
-          _boolValues[key] = e.value as bool;
-        } else if (e.value is! List && e.value is! Map) {
-          _controllers[key] = TextEditingController(text: e.value?.toString() ?? '');
-        }
-      }
-    }
-  }
-
-  Future<void> _save() async {
-    setState(() { _saving = true; _error = null; });
-    final out = Map<String, dynamic>.from(_data!);
-    for (final section in out.keys.toList()) {
-      if (out[section] is! Map) continue;
-      final m = Map<String, dynamic>.from(out[section] as Map);
-      for (final k in m.keys.toList()) {
-        final flatKey = '$section.$k';
-        if (_boolValues.containsKey(flatKey)) {
-          m[k] = _boolValues[flatKey];
-        } else if (_controllers.containsKey(flatKey)) {
-          final raw = _controllers[flatKey]!.text;
-          m[k] = num.tryParse(raw) ?? raw;
-        }
-      }
-      out[section] = m;
-    }
-    final ok = await context.read<TaskProvider>().api.saveSettings(out);
-    if (!mounted) return;
-    setState(() { _saving = false; _error = ok ? null : '保存失败'; });
-    if (ok) ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('设置已保存'), duration: Duration(seconds: 2)));
-  }
-
-  @override
-  void dispose() {
-    for (final c in _controllers.values) c.dispose();
-    super.dispose();
-  }
-
-  static const _sectionLabels = {
-    'general': '通用', 'display': '显示', 'update': '更新',
-    'advanced': '高级', 'notification': '通知', 'warpForecast': '抽卡预测',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00C8D7)));
-    if (_data == null) return const Center(child: Text('加载失败'));
-    return Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-        child: Row(children: [
-          Text('系统设置', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold)),
-          const Spacer(),
-          if (_error != null) Text(_error!, style: const TextStyle(color: Color(0xFFFF3366), fontSize: 12)),
-          const SizedBox(width: 8),
-          TextButton(onPressed: _saving ? null : _save,
-            child: Text(_saving ? '保存中...' : '保存', style: const TextStyle(color: Color(0xFF00C8D7)))),
-        ]),
-      ),
-      Expanded(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          children: _data!.entries.map((section) {
-            if (section.value is! Map) return const SizedBox.shrink();
-            return _SectionCard(
-              title: _sectionLabels[section.key] ?? section.key,
-              fields: Map<String, dynamic>.from(section.value as Map),
-              controllers: _controllers,
-              boolValues: _boolValues,
-              sectionKey: section.key,
-              onBoolChanged: (k, v) => setState(() => _boolValues[k] = v),
-            );
-          }).toList(),
-        ),
-      ),
-    ]);
-  }
-}
-
-// ── 拓展页 ─────────────────────────────────────────
-class _ExtensionsPage extends StatefulWidget {
-  const _ExtensionsPage();
-  @override
-  State<_ExtensionsPage> createState() => _ExtensionsPageState();
-}
-
-class _ExtensionsPageState extends State<_ExtensionsPage> {
-  List<dynamic> _repos = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final data = await context.read<TaskProvider>().api.getScriptRepos();
-      if (mounted) setState(() { _repos = data; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-          child: Row(
-            children: [
-              Text('脚本仓库', style: TextStyle(color: onSurface, fontSize: 18, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              IconButton(onPressed: _load, icon: Icon(Icons.refresh, color: onSurface.withOpacity(0.4), size: 20)),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFF00C8D7)))
-              : _repos.isEmpty
-                  ? Center(child: Text('暂无脚本仓库', style: TextStyle(color: onSurface.withOpacity(0.38))))
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      itemCount: _repos.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) {
-                        final repo = _repos[i] as Map<String, dynamic>;
-                        final name = repo['name']?.toString() ?? repo['url']?.toString() ?? '未知';
-                        final url = repo['url']?.toString() ?? '';
-                        final enabled = repo['enabled'] as bool? ?? true;
-                        return _GlassCard(
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF7C3AED).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.extension, color: Color(0xFF7C3AED), size: 22),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(name, style: TextStyle(color: onSurface, fontSize: 14, fontWeight: FontWeight.w500)),
-                                    if (url.isNotEmpty)
-                                      Text(url, style: TextStyle(color: onSurface.withOpacity(0.45), fontSize: 11), overflow: TextOverflow.ellipsis),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: (enabled ? const Color(0xFF10B981) : Colors.grey).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(enabled ? '已启用' : '已禁用',
-                                    style: TextStyle(
-                                      color: enabled ? const Color(0xFF10B981) : Colors.grey,
-                                      fontSize: 11, fontWeight: FontWeight.w500)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-        ),
-      ],
-    );
-  }
-}
 
 // ── 通用组件 ───────────────────────────────────────
 
@@ -1196,218 +894,8 @@ class _PulsingDotState extends State<_PulsingDot>
   }
 }
 
-// ── Section 智能表单卡片 ───────────────────────────────
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Map<String, dynamic> fields;
-  final Map<String, TextEditingController> controllers;
-  final Map<String, bool> boolValues;
-  final String? sectionKey;
-  final void Function(String key, bool val) onBoolChanged;
-
-  const _SectionCard({
-    required this.title,
-    required this.fields,
-    required this.controllers,
-    required this.boolValues,
-    required this.onBoolChanged,
-    this.sectionKey,
-  });
-
-  static const _fieldLabels = <String, String>{
-    // 通用 bool
-    'enabled': '启用',
-    // startGame / 启动游戏
-    'autologin': '自动登录',
-    'relogin': '重新登录',
-    'game.path': '游戏路径',
-    'game.channel': '游戏渠道',
-    'game.useGlobalPath': '使用全局路径',
-    'username': '账号',
-    'password': '密码',
-    // trailblazePower / 锄大地
-    'replenish.enabled': '补充体力',
-    'replenish.times': '补充次数',
-    'replenish.way': '补充方式',
-    'useAssistant': '使用助手',
-    'useBuildTarget': '使用培养目标',
-    'activity.enabled': '活动副本',
-    'activity.gardenOfPlenty.level1': '丰收花园 难度1',
-    'activity.gardenOfPlenty.level2': '丰收花园 难度2',
-    'activity.planarFissure.level': '位面裂隙 难度',
-    'activity.realmOfTheStrange.level': '异域秘境 难度',
-    // receiveRewards / 领取奖励
-    'redeemCodes': '兑换码',
-    // cosmicStrife / 模拟宇宙
-    'pointRewards.enabled': '积分奖励',
-    'divergentUniverse.enabled': '差分宇宙',
-    'divergentUniverse.mode': '差分宇宙模式',
-    'divergentUniverse.runtimes': '差分宇宙次数',
-    'divergentUniverse.useTechnique': '使用秘技',
-    'currencyWars.enabled': '黄金与机械',
-    'currencyWars.mode': '模式',
-    'currencyWars.difficulty': '难度',
-    'currencyWars.runtimes': '运行次数',
-    'currencyWars.strategy': '策略',
-    'currencyWars.username': '用户名',
-    // missionAccomplished / 任务完成后
-    'exitApp': '退出软件',
-    'exitGame': '退出游戏',
-    'shutdown': '关机',
-    'sleep': '睡眠',
-    'logout': '注销',
-    // general settings
-    'gamePath.autoDetect': '自动检测游戏路径',
-    'gamePath.index': '游戏路径序号',
-    'gameArgs.enabled': '启用游戏参数',
-    'gameArgs.fullScreenMode': '全屏模式',
-    'gameArgs.windowSize': '窗口尺寸',
-    'gameArgs.popupWindow': '弹出窗口',
-    'gameArgs.useCmd': '使用CMD启动',
-    'gameArgs.advanced': '高级参数',
-    'cloudGame.enabled': '云游戏',
-    'cloudGame.browser': '云游戏浏览器',
-    'ocrMatchConfidence': 'OCR 置信度',
-    'templateMatchConfidence': '模板匹配置信度',
-    // display settings
-    'backgroundImage.uri': '背景图片',
-    'backgroundImage.opacity': '背景透明度',
-    'controlPanel.opacity': '控制面板透明度',
-    'language': '语言',
-    'window.remember': '记住窗口位置',
-    // update settings
-    'mirrorChyanCdk': 'CDK 镜像',
-    'downloadChannel': '下载渠道',
-    'autoUpdate': '自动更新',
-    'checkForUpdates': '检查更新',
-    'updateChannel': '更新渠道',
-    // advanced settings
-    'backend.launchArgs': '后端启动参数',
-    'backend.remote.enabled': '启用远程后端',
-    'backend.remote.baseUrl': '远程后端地址',
-    'webui.remote.enabled': '启用 WebUI 远程',
-    'webui.remote.autostart': '自动启动 WebUI',
-    'webui.remote.token': 'WebUI Token',
-    'developerMode.enabled': '开发者模式',
-    'developerMode.overlay': '调试覆盖层',
-    'developerMode.python.enabled': 'Python 脚本',
-    'developerMode.saveOcrImage': '保存 OCR 图像',
-    'developerMode.python.main': 'Python 入口',
-    'developerMode.python.path': 'Python 路径',
-    // notification settings
-    'system.enabled': '系统通知',
-    'bark.enabled': 'Bark 通知',
-    'bark.serverUrl': 'Bark 服务器',
-    'bark.deviceKey': 'Bark DeviceKey',
-    'bark.group': 'Bark 分组',
-    'bark.sound': 'Bark 声音',
-    'bark.level': 'Bark 等级',
-    'bark.ciphertext': 'Bark 密文',
-    'bark.icon': 'Bark 图标',
-    'dingTalk.enabled': '钉钉通知',
-    'dingTalk.webhookUrl': '钉钉 Webhook',
-    'dingTalk.secret': '钉钉签名密钥',
-    'discord.enabled': 'Discord 通知',
-    'discord.webhookUrl': 'Discord Webhook',
-    'discord.sendImage': 'Discord 发送图片',
-    'feishu.enabled': '飞书通知',
-    'feishu.webhookUrl': '飞书 Webhook',
-    'feishu.appId': '飞书 AppID',
-    'feishu.appSecret': '飞书 AppSecret',
-    'feishu.receiveId': '飞书接收者ID',
-    'feishu.receiveIdType': '飞书接收者类型',
-    'oneBot.enabled': 'OneBot 通知',
-    'oneBot.url': 'OneBot 地址',
-    'oneBot.token': 'OneBot Token',
-    'oneBot.userId': 'OneBot 用户ID',
-    'oneBot.groupId': 'OneBot 群ID',
-    'oneBot.sendImage': 'OneBot 发送图片',
-    'serverChan.enabled': 'Server酱',
-    'serverChan.sendKey': 'Server酱 SendKey',
-    'telegram.enabled': 'Telegram 通知',
-    'telegram.botToken': 'Bot Token',
-    'telegram.chatId': 'Chat ID',
-    'telegram.apiBaseUrl': 'API 地址',
-    'telegram.proxyEnabled': '启用代理',
-    'telegram.proxyUrl': '代理地址',
-    'telegram.sendImage': '发送图片',
-    'weCom.enabled': '企业微信',
-    'weCom.webhookUrl': '企业微信 Webhook',
-    'weCom.sendImage': '发送图片',
-    'webhook.enabled': 'Webhook',
-    'webhook.url': 'Webhook 地址',
-    'email.enabled': '邮件通知',
-    'email.smtpServer': 'SMTP 服务器',
-    'email.smtpPort': 'SMTP 端口',
-    'email.smtpSender': '发件人',
-    'email.smtpReceiver': '收件人',
-    'email.smtpAuthCode': '授权码',
-    'xxtui.enabled': 'XXTui 通知',
-    'xxtui.apiKey': 'XXTui API Key',
-    'xxtui.channel': 'XXTui 渠道',
-    'xxtui.source': 'XXTui 来源',
-  };
-
-  static bool _isSensitive(String key) =>
-      key.contains('password') || key.contains('token') ||
-      key.contains('secret') || key.contains('Auth');
-
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final visibleFields = fields.entries
-        .where((e) => e.value is! List && e.value is! Map)
-        .toList();
-    if (visibleFields.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: _GlassCard(child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TextStyle(color: onSurface, fontSize: 15, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          ...visibleFields.map((e) {
-            final flatKey = sectionKey != null ? '$sectionKey.${e.key}' : e.key;
-            final label = _fieldLabels[e.key] ?? e.key;
-            if (e.value is bool) {
-              final val = boolValues[flatKey] ?? (e.value as bool);
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(children: [
-                  Expanded(child: Text(label, style: TextStyle(color: onSurface, fontSize: 14))),
-                  Switch(value: val, onChanged: (v) => onBoolChanged(flatKey, v), activeColor: const Color(0xFF00C8D7)),
-                ]),
-              );
-            }
-            final ctrl = controllers[flatKey];
-            if (ctrl == null) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: TextStyle(color: onSurface.withOpacity(0.55), fontSize: 12)),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: ctrl,
-                  obscureText: _isSensitive(e.key),
-                  keyboardType: e.value is num ? TextInputType.number : TextInputType.text,
-                  style: TextStyle(color: onSurface, fontSize: 14),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ]),
-            );
-          }),
-        ],
-      )),
-    );
-  }
-}
-
-// 波浪画笔（幕布顶部过渡，多层不同透明度，幅度随覆盖进度收缩）
+// 波浪画笔（幕布顶部过渡，三层不同透明度，幅度随覆盖进度收缩）
+// 参考 WebUI: .wave-back(0.32) / .wave-mid(0.58) / .wave-front(0.94)
 class _WavePainter extends CustomPainter {
   final double t;
   final Color color;
@@ -1417,33 +905,34 @@ class _WavePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 三层波浪：主层 + 两层偏移半透明
+    final amp = amplitude.clamp(0.0, 1.0);
+    // 三层：后→中→前，越靠前越不透明、振幅越大、基线越低
     final layers = [
-      _WaveLayer(opacity: 1.0,  ampScale: 1.0,  speedMul: 1.0,   phaseOffset: 0.0),
-      _WaveLayer(opacity: 0.45, ampScale: 0.75, speedMul: 0.65,  phaseOffset: 0.35),
-      _WaveLayer(opacity: 0.22, ampScale: 0.55, speedMul: 1.35,  phaseOffset: 0.65),
+      _WaveLayer(opacity: 0.32, baseFactor: 0.30, ampScale: 0.7, speed: 0.55, phase: 0.0,  freq: 1.0),
+      _WaveLayer(opacity: 0.58, baseFactor: 0.45, ampScale: 0.85, speed: -0.8, phase: 0.4,  freq: 1.3),
+      _WaveLayer(opacity: 0.94, baseFactor: 0.62, ampScale: 1.0, speed: 1.1,  phase: 0.7,  freq: 0.85),
     ];
 
-    final baseAmp = 14.0 * amplitude.clamp(0.0, 1.0);
+    final baseAmp = 16.0 * amp;
 
     for (final layer in layers) {
       final paint = Paint()
         ..color = color.withOpacity(layer.opacity)
-        ..style = PaintingStyle.fill;
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true;
 
       final path = Path();
-      path.moveTo(0, size.height);
-
-      for (double x = 0; x <= size.width; x++) {
+      path.moveTo(0, size.height + 1); // 底边下沉 1px，与面板重叠防接缝
+      final baseline = size.height * layer.baseFactor;
+      for (double x = 0; x <= size.width; x += 1) {
         final px = x / size.width;
-        final amp = baseAmp * layer.ampScale;
-        final y = size.height * 0.55
-            + sin((px * 2 * pi) + t * 2 * pi * layer.speedMul + layer.phaseOffset * 2 * pi) * amp
-            + sin((px * 3.5 * pi) + t * 2 * pi * layer.speedMul * 0.7 + layer.phaseOffset) * amp * 0.5;
+        final a = baseAmp * layer.ampScale;
+        final y = baseline
+            + sin((px * 2 * pi * layer.freq) + t * 2 * pi * layer.speed + layer.phase * 2 * pi) * a
+            + sin((px * 3.5 * pi * layer.freq) + t * 2 * pi * layer.speed * 0.7 + layer.phase) * a * 0.45;
         path.lineTo(x, y);
       }
-
-      path.lineTo(size.width, size.height);
+      path.lineTo(size.width, size.height + 1);
       path.close();
       canvas.drawPath(path, paint);
     }
@@ -1456,13 +945,17 @@ class _WavePainter extends CustomPainter {
 
 class _WaveLayer {
   final double opacity;
+  final double baseFactor; // 基线在画布高度的占比
   final double ampScale;
-  final double speedMul;
-  final double phaseOffset;
+  final double speed;
+  final double phase;
+  final double freq;
   const _WaveLayer({
     required this.opacity,
+    required this.baseFactor,
     required this.ampScale,
-    required this.speedMul,
-    required this.phaseOffset,
+    required this.speed,
+    required this.phase,
+    required this.freq,
   });
 }
