@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen>
   final DraggableScrollableController _sheetCtrl = DraggableScrollableController();
   double _sheetProgress = 0.0; // 0=46% 1=100%
   bool _navVisible = true; // 悬浮导航可见性
+  double _scrollAccum = 0; // 滚动增量累积
 
   static const _pageTitles = ['任务控制', '配置管理', '运行日志', '拓展', '系统设置'];
   static const _pageDescs = [
@@ -68,23 +69,26 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-  // 内容滚动方向 → 控制悬浮导航显隐
+  // 内容滚动方向 → 控制悬浮导航显隐（增量累积，避免抖动与短页面误判）
   bool _onScrollNotification(ScrollNotification n) {
-    // 顶部附近始终显示，避免短页面误隐藏后无法恢复
-    if (n.metrics.pixels <= 8) {
-      if (!_navVisible) setState(() => _navVisible = true);
-      return false;
-    }
-    // 内容不足以滚动时（短页面）始终显示
-    if (n.metrics.maxScrollExtent <= 0) {
-      if (!_navVisible) setState(() => _navVisible = true);
-      return false;
-    }
-    if (n is UserScrollNotification) {
-      if (n.direction == ScrollDirection.reverse && _navVisible) {
-        setState(() => _navVisible = false); // 下滑隐藏
-      } else if (n.direction == ScrollDirection.forward && !_navVisible) {
-        setState(() => _navVisible = true); // 上滑显示
+    if (n is ScrollUpdateNotification) {
+      final delta = n.scrollDelta ?? 0;
+      // 顶部附近始终显示（短页面也能恢复）
+      if (n.metrics.pixels <= 8) {
+        _scrollAccum = 0;
+        if (!_navVisible) setState(() => _navVisible = true);
+        return false;
+      }
+      if (delta > 0) {
+        // 向下滚动（看后面内容）→ 累积后隐藏
+        if (_scrollAccum < 0) _scrollAccum = 0;
+        _scrollAccum += delta;
+        if (_scrollAccum > 20 && _navVisible) setState(() => _navVisible = false);
+      } else if (delta < 0) {
+        // 向上滚动 → 累积后显示
+        if (_scrollAccum > 0) _scrollAccum = 0;
+        _scrollAccum += delta;
+        if (_scrollAccum < -20 && !_navVisible) setState(() => _navVisible = true);
       }
     }
     return false;

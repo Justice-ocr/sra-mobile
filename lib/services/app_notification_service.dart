@@ -40,17 +40,34 @@ class AppNotificationService {
     if (value && !_initialized) await init();
   }
 
-  Future<void> show(String title, String body) async {
+  Future<void> show(String title, String body, {String? imagePath}) async {
     if (!_enabled || !_initialized) return;
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
+    AndroidNotificationDetails android;
+    if (imagePath != null) {
+      // 大图通知（BigPictureStyle）
+      final picture = FilePathAndroidBitmap(imagePath);
+      android = AndroidNotificationDetails(
         'sra_task_channel',
         'SRA 任务通知',
         channelDescription: 'SRA 任务状态变化通知',
         importance: Importance.high,
         priority: Priority.high,
-      ),
-    );
+        styleInformation: BigPictureStyleInformation(
+          picture,
+          contentTitle: title,
+          summaryText: body,
+        ),
+      );
+    } else {
+      android = const AndroidNotificationDetails(
+        'sra_task_channel',
+        'SRA 任务通知',
+        channelDescription: 'SRA 任务状态变化通知',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+    }
+    final details = NotificationDetails(android: android);
     try {
       await _plugin.show(DateTime.now().millisecondsSinceEpoch ~/ 1000, title, body, details);
     } catch (e) {
