@@ -328,8 +328,7 @@ class _SettingsPageViewState extends State<SettingsPageView> {
                   side: const BorderSide(color: kPrimary),
                 ),
                 onPressed: () async {
-                  await AppNotificationService.instance.show(
-                      'SRA 测试通知', '这是一条来自 SRA 控制台的测试通知');
+                  await AppNotificationService.instance.showTest();
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('已发送测试通知'), duration: Duration(seconds: 2)));

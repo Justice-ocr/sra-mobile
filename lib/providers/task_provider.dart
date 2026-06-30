@@ -37,9 +37,11 @@ class TaskProvider extends ChangeNotifier {
       final prev = _status;
       _status = await api.getTaskStatus();
       _error = null;
-      // 任务由运行→停止：发本地通知（app 端实现，不依赖 SRA 本体）
+      // 任务由运行→停止：拉取游戏截图并发本地通知（app 端实现，不依赖 SRA 本体）
       if (prev?.running == true && _status?.running == false) {
-        AppNotificationService.instance.show('SRA 任务完成', '任务已结束运行');
+        final shot = await api.getScreenshot();
+        await AppNotificationService.instance
+            .showWithBytes('SRA 任务完成', '任务已结束运行', shot);
       }
       notifyListeners();
     } catch (_) {}

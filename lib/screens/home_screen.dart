@@ -12,6 +12,7 @@ import '../providers/theme_provider.dart';
 import 'config_editor_page.dart';
 import 'settings_page_view.dart';
 import 'extensions_page_view.dart';
+import 'notification_history_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,7 +72,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   // 内容滚动方向 → 控制悬浮导航显隐（增量累积，避免抖动与短页面误判）
   bool _onScrollNotification(ScrollNotification n) {
+    // 仅响应竖直方向滚动；TabBar 横向滚动 / tab 切换不应影响导航
+    if (n.metrics.axis != Axis.vertical) return false;
     if (n is ScrollUpdateNotification) {
+      // 切换 tab 等程序性跳变（无用户拖拽且无惯性）忽略，避免误隐藏
       final delta = n.scrollDelta ?? 0;
       // 顶部附近始终显示（短页面也能恢复）
       if (n.metrics.pixels <= 8) {
@@ -728,6 +732,19 @@ class _LogPageState extends State<_LogPage> {
             children: [
               Text('运行日志', style: TextStyle(color: onSurface, fontSize: 18, fontWeight: FontWeight.bold)),
               const Spacer(),
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const NotificationHistoryPage(),
+                )),
+                child: const Row(
+                  children: [
+                    Icon(Icons.history, color: Color(0xFF00C8D7), size: 16),
+                    SizedBox(width: 4),
+                    Text('通知历史', style: TextStyle(color: Color(0xFF00C8D7), fontSize: 12)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
               if (_lines.isNotEmpty)
                 GestureDetector(
                   onTap: () => setState(() => _lines.clear()),

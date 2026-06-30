@@ -161,6 +161,21 @@ class ApiService {
     }
   }
 
+  // 截取游戏窗口，返回 PNG 字节；失败返回 null
+  Future<List<int>?> getScreenshot() async {
+    try {
+      final response = await _dio.get<List<int>>(
+        '/api/Task/screenshot',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final data = response.data;
+      if (data == null || data.isEmpty) return null;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // SSE 日志流：返回原始 Stream<String>
   Stream<String> streamLogs() {
     final uri = Uri.parse('${_baseUrl!}/api/Task/logs/stream?access_token=$_token');
