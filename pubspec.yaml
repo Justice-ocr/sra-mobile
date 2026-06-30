@@ -1,0 +1,32 @@
+name: sra_mobile
+description: StarRailAssistant 手机控制台
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.0
+  dio: ^5.4.0
+  http: ^1.1.0
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.0
+  go_router: ^13.0.0
+  google_fonts: ^6.1.0
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  intl: ^0.19.0
+  equatable: ^2.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
